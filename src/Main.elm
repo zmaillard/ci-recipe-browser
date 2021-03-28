@@ -1,4 +1,4 @@
-module Main exposing (main, init)
+module Main exposing (init, main)
 
 import Browser
 import Html exposing (..)
@@ -57,7 +57,6 @@ init _ =
 
 fetchRecipes : List String -> List String -> String -> Cmd Msg
 fetchRecipes yearFacets categoryFacets searchTerm =
-
     Http.get
         { url = buildSearchUrl yearFacets categoryFacets searchTerm
         , expect =
@@ -125,33 +124,65 @@ update msg model =
 view : Model -> Html Msg
 view model =
     div []
-        [ button [ onClick SendHttpRequest ]
-            [ text "Search" ]
-        , viewRecipesOrError model
-        , viewFacetsOrError model
+        [ viewSearchBox
+        , viewContents model
+        ]
+
+
+viewContents : Model -> Html Msg
+viewContents model =
+    div [ class "container" ]
+        [ div [ class "columns" ]
+            [ div [ class "column is-3" ]
+                [ viewFacetsOrError model ]
+            , div [ class "column is-9" ]
+                [ viewRecipesOrError model
+                ]
+            ]
+        ]
+
+
+viewSearchBox : Html Msg
+viewSearchBox =
+    div [ class "container has-text-centered" ]
+        [ div [ class "column is-6 is-offset-3" ]
+            [ div [ class "box" ]
+                [ div [ class "field is-grouped" ]
+                    [ p [ class "control is-expanded" ]
+                        [ input [ type_ "text", placeholder "Search For Recipes", class "input" ]
+                            []
+                        ]
+                    , p [ class "control" ]
+                        [ button [ class "button is-info", onClick SendHttpRequest ]
+                            [ text "Search" ]
+                        ]
+                    ]
+                ]
+            ]
         ]
 
 
 viewRecipes : List Recipe -> Html Msg
 viewRecipes recipes =
     div []
-        [ h3 [] [ text "Recipes" ]
-        , table []
+        [ table [ class "table is-striped" ]
             ([ viewTableHeader ] ++ List.map viewRecipe recipes)
         ]
 
 
 viewTableHeader : Html Msg
 viewTableHeader =
-    tr []
-        [ th []
-            [ text "Issue" ]
-        , th []
-            [ text "Year" ]
-        , th []
-            [ text "Recipe Name" ]
-        , th []
-            [ text "Category" ]
+    thead []
+        [ tr []
+            [ th []
+                [ text "Issue" ]
+            , th []
+                [ text "Year" ]
+            , th []
+                [ text "Recipe Name" ]
+            , th []
+                [ text "Category" ]
+            ]
         ]
 
 
