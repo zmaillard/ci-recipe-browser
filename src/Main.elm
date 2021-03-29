@@ -206,8 +206,10 @@ viewCategoryFacet selected facet =
         isChecked =
             not (List.isEmpty (List.filter (\s -> s == facet.category) selected))
     in
-    input [ type_ "checkbox", checked isChecked, onClick (CategoryFacetChanged facet.category (not isChecked)) ]
-        [ text (facet.category ++ " (" ++ String.fromInt facet.count ++ ")") ]
+    label [ class "panel-block" ]
+        [ input [ type_ "checkbox", checked isChecked, onClick (CategoryFacetChanged facet.category (not isChecked)) ]
+            [ text (facet.category ++ " (" ++ String.fromInt facet.count ++ ")") ]
+        ]
 
 
 viewYearFacet : List String -> YearFacet -> Html Msg
@@ -218,8 +220,10 @@ viewYearFacet selected facet =
 
         -- isChecked = True
     in
-    input [ type_ "checkbox", checked isChecked, onClick (YearFacetChanged (String.fromInt facet.year) (not isChecked)) ]
-        [ text (String.fromInt facet.year ++ " (" ++ String.fromInt facet.count ++ ")") ]
+    label [ class "panel-block" ]
+        [ input [ type_ "checkbox", checked isChecked, onClick (YearFacetChanged (String.fromInt facet.year) (not isChecked)) ]
+            [ text (String.fromInt facet.year ++ " (" ++ String.fromInt facet.count ++ ")") ]
+        ]
 
 
 viewFacets : List CategoryFacet -> List YearFacet -> List String -> List String -> Html Msg
@@ -231,7 +235,25 @@ viewFacets categoryFacets yearFacets selectedCategoryFacets selectedYearFacets =
         viewYearFacetWithSelect =
             viewYearFacet selectedYearFacets
     in
-    ul [] (List.append (List.map viewCatFacetWithSelect categoryFacets) (List.map viewYearFacetWithSelect yearFacets))
+    div []
+        [ nav [ class "panel" ]
+            ([ panelHeading "Filter By Category" ]
+                ++ List.map
+                    viewCatFacetWithSelect
+                    categoryFacets
+            )
+        , nav [ class "panel" ]
+            ([ panelHeading "Filter By Year" ]
+                ++ List.map viewYearFacetWithSelect yearFacets
+            )
+        ]
+
+
+panelHeading : String -> Html Msg
+panelHeading title =
+    p [ class "panel-heading" ]
+        [ text title
+        ]
 
 
 viewFacetsOrError : Model -> Html Msg
