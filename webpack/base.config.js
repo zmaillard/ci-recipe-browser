@@ -29,15 +29,4 @@ module.exports = {
         ]
     },
 
-    plugins: [
-        new webpack.HotModuleReplacementPlugin(),
-    ],
-    mode: 'development',
-
-    devServer: {
-        inline: true,
-        hot: true,
-        stats: 'errors-only',
-        contentBase: path.join(__dirname, "src"),
-    }
 }

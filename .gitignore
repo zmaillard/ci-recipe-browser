@@ -5,3 +5,4 @@ repl-temp-*
 elm.js
 .env
 node_modules
+dist
