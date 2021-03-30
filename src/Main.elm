@@ -3,7 +3,7 @@ module Main exposing (init, main)
 import Browser
 import Html exposing (..)
 import Html.Attributes exposing (..)
-import Html.Events exposing (onClick)
+import Html.Events exposing (onClick, onInput, onCheck)
 import Http
 import Json.Decode exposing (Decoder, Error(..), field, int, map2, map3, string)
 import Recipe exposing (Recipe, recipesDecoder)
@@ -42,6 +42,7 @@ type Msg
     | RecipesReceived (WebData IndexResult)
     | CategoryFacetChanged String Bool
     | YearFacetChanged String Bool
+    | SearchTermChanged String
 
 
 init : () -> ( Model, Cmd Msg )
@@ -101,6 +102,9 @@ update msg model =
         RecipesReceived response ->
             ( { model | results = response }, Cmd.none )
 
+        SearchTermChanged searchTerm ->
+            ( { model | searchTerm = searchTerm }, Cmd.none )
+
         YearFacetChanged facet checked ->
             if checked then
                 ( { model | selectedYearFacets = model.selectedYearFacets ++ [ facet ] }, fetchRecipes model.selectedYearFacets model.selectedCategoryFacets model.searchTerm )
@@ -149,7 +153,7 @@ viewSearchBox =
             [ div [ class "box" ]
                 [ div [ class "field is-grouped" ]
                     [ p [ class "control is-expanded" ]
-                        [ input [ type_ "text", placeholder "Search For Recipes", class "input" ]
+                        [ input [ type_ "text", placeholder "Search For Recipes", class "input", onInput SearchTermChanged ]
                             []
                         ]
                     , p [ class "control" ]
@@ -166,7 +170,7 @@ viewRecipes : List Recipe -> Html Msg
 viewRecipes recipes =
     div []
         [ table [ class "table is-striped" ]
-            ([ viewTableHeader ] ++ List.map viewRecipe recipes)
+            ( viewTableHeader  :: List.map viewRecipe recipes)
         ]
 
 
@@ -207,8 +211,8 @@ viewCategoryFacet selected facet =
             not (List.isEmpty (List.filter (\s -> s == facet.category) selected))
     in
     label [ class "panel-block" ]
-        [ input [ type_ "checkbox", checked isChecked, onClick (CategoryFacetChanged facet.category (not isChecked)) ]
-            [ text (facet.category ++ " (" ++ String.fromInt facet.count ++ ")") ]
+        [ input [ type_ "checkbox", checked isChecked, onCheck (CategoryFacetChanged facet.category ) ] []
+        , text (facet.category ++ " (" ++ String.fromInt facet.count ++ ")")
         ]
 
 
@@ -221,8 +225,8 @@ viewYearFacet selected facet =
         -- isChecked = True
     in
     label [ class "panel-block" ]
-        [ input [ type_ "checkbox", checked isChecked, onClick (YearFacetChanged (String.fromInt facet.year) (not isChecked)) ]
-            [ text (String.fromInt facet.year ++ " (" ++ String.fromInt facet.count ++ ")") ]
+        [ input [ type_ "checkbox", checked isChecked, onCheck (YearFacetChanged (String.fromInt facet.year)) ] []
+        , text (String.fromInt facet.year ++ " (" ++ String.fromInt facet.count ++ ")")
         ]
 
 
@@ -237,14 +241,14 @@ viewFacets categoryFacets yearFacets selectedCategoryFacets selectedYearFacets =
     in
     div []
         [ nav [ class "panel" ]
-            ([ panelHeading "Filter By Category" ]
-                ++ List.map
+            ( panelHeading "Filter By Category" 
+                :: List.map
                     viewCatFacetWithSelect
                     categoryFacets
             )
         , nav [ class "panel" ]
-            ([ panelHeading "Filter By Year" ]
-                ++ List.map viewYearFacetWithSelect yearFacets
+            ( panelHeading "Filter By Year" 
+                :: List.map viewYearFacetWithSelect yearFacets
             )
         ]
 
