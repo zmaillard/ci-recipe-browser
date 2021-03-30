@@ -1,0 +1,23 @@
+{
+  "name": "ci-recipe-browser",
+  "version": "0.0.1",
+  "description": "Cooks Illustrated Recipe Browser",
+  "main": "index.js",
+  "repository": "git@github.com:zmaillard/ci-recipe-browser.git",
+  "author": "Zachary Maillard <zmaillard@protonmail.com>",
+  "license": "MIT",
+  "scripts": {
+    "dev": "webpack serve --mode development --port 3000"
+  },
+  "devDependencies": {
+    "dotenv": "^8.2.0",
+    "elm-hot-webpack-loader": "^1.1.8",
+    "elm-webpack-loader": "^8.0.0",
+    "file-loader": "^6.2.0",
+    "loader-utils": "^2.0.0",
+    "uglify": "^0.1.5",
+    "webpack": "^5.28.0",
+    "webpack-cli": "^4.6.0",
+    "webpack-dev-server": "^3.11.2"
+  }
+}
