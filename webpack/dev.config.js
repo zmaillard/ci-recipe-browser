@@ -1,17 +1,23 @@
-const webpack = require("webpack");
-const { merge } = require("webpack-merge");
-const baseConfig = require("./base.config");
 const path = require("path");
+const webpack = require("webpack");
 
-module.exports = merge(baseConfig, {
-  mode: "development",
-  plugins: [new webpack.HotModuleReplacementPlugin()],
+module.exports = () => ({
   module: {
-    devServer: {
-      inline: true,
-      hot: true,
-      stats: "errors-only",
-      contentBase: path.join(__dirname, "src"),
-    },
+    rules: [
+      {
+        test: /\.elm$/,
+        exclude: [/elm-stuff/, /node_modules/],
+        use: [
+          { loader: "elm-hot-webpack-loader" },
+          {
+            loader: "elm-webpack-loader",
+            options: {
+              cwd: __dirname,
+              debug: false,
+            },
+          },
+        ],
+      },
+    ],
   },
 });
