@@ -6,11 +6,12 @@ const path = require("path");
 module.exports = merge(baseConfig, {
   mode: "development",
   plugins: [new webpack.HotModuleReplacementPlugin()],
-
-  devServer: {
-    inline: true,
-    hot: true,
-    stats: "errors-only",
-    contentBase: path.join(__dirname, "src"),
+  module: {
+    devServer: {
+      inline: true,
+      hot: true,
+      stats: "errors-only",
+      contentBase: path.join(__dirname, "src"),
+    },
   },
 });

@@ -1,13 +1,36 @@
 const webpack = require("webpack");
-const { merge } = require("webpack-merge");
+const { mergeWithRules } = require("webpack-merge");
 const baseConfig = require("./base.config");
 const path = require("path");
 
-module.exports = merge(baseConfig, {
+const mergeRules = {
+  module: {
+    rules: {
+      test: "match",
+      use: {
+        loader: "match",
+        options: "replace",
+      },
+    },
+  },
+};
+
+module.exports = mergeWithRules(mergeRules)(baseConfig, {
   mode: "production",
-
   output: {
-      path: path.resolve('./dist'),
-  }
-
+    path: path.resolve("./dist"),
+  },
+  module: {
+    rules: [
+      {
+        test: /\.elm$/,
+        use: {
+          loader: "elm-webpack-loader",
+          options: {
+            optimize: true,
+          },
+        },
+      },
+    ],
+  },
 });
