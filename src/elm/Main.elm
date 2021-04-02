@@ -3,7 +3,7 @@ module Main exposing (init, main)
 import Browser
 import Html exposing (..)
 import Html.Attributes exposing (..)
-import Html.Events exposing (onClick, onInput, onCheck)
+import Html.Events exposing (onCheck, onClick, onInput)
 import Http
 import Json.Decode exposing (Decoder, Error(..), field, int, map2, map3, string)
 import Recipe exposing (Recipe, recipesDecoder)
@@ -34,6 +34,8 @@ type alias Model =
     , selectedYearFacets : List String
     , selectedCategoryFacets : List String
     , searchTerm : String
+    , searchServiceUrl : String
+    , searchServiceApiKey : String
     }
 
 
@@ -45,21 +47,23 @@ type Msg
     | SearchTermChanged String
 
 
-init : () -> ( Model, Cmd Msg )
-init _ =
+init : Flags -> ( Model, Cmd Msg )
+init flags =
     ( { results = RemoteData.Loading
       , selectedYearFacets = []
       , selectedCategoryFacets = []
       , searchTerm = "*"
+      , searchServiceUrl = flags.searchServiceUrl
+      , searchServiceApiKey = flags.searchApiKey
       }
-    , fetchRecipes [] [] "*"
+    , fetchRecipes [] [] "*" flags.searchServiceUrl flags.searchApiKey
     )
 
 
-fetchRecipes : List String -> List String -> String -> Cmd Msg
-fetchRecipes yearFacets categoryFacets searchTerm =
+fetchRecipes : List String -> List String -> String -> String -> String -> Cmd Msg
+fetchRecipes yearFacets categoryFacets searchTerm url apiKey =
     Http.get
-        { url = buildSearchUrl yearFacets categoryFacets searchTerm
+        { url = buildSearchUrl url apiKey yearFacets categoryFacets searchTerm
         , expect =
             indexDecoder
                 |> Http.expectJson (RemoteData.fromResult >> RecipesReceived)
@@ -88,16 +92,16 @@ buildFilters yearFacets categoryFacets =
         "&$filter=" ++ categoryFacet ++ " and " ++ yearFacet
 
 
-buildSearchUrl : List String -> List String -> String -> String
-buildSearchUrl yearFacets categoryFacets searchTerm =
-    "https://signsearchtest.search.windows.net/indexes/recipe-index/docs?search=" ++ searchTerm ++ buildFilters yearFacets categoryFacets ++ "&api-version=2020-06-30-Preview&facet=category&facet=year&api-key=SUPERSECRET"
+buildSearchUrl : String -> String -> List String -> List String -> String -> String
+buildSearchUrl url apiKey yearFacets categoryFacets searchTerm =
+    url ++ "/docs?search=" ++ searchTerm ++ buildFilters yearFacets categoryFacets ++ "&api-version=2020-06-30-Preview&facet=category&facet=year&api-key=" ++ apiKey
 
 
 update : Msg -> Model -> ( Model, Cmd Msg )
 update msg model =
     case msg of
         SendHttpRequest ->
-            ( { model | results = RemoteData.Loading }, fetchRecipes model.selectedYearFacets model.selectedCategoryFacets model.searchTerm )
+            ( { model | results = RemoteData.Loading }, fetchRecipes model.selectedYearFacets model.selectedCategoryFacets model.searchTerm model.searchServiceUrl model.searchServiceApiKey )
 
         RecipesReceived response ->
             ( { model | results = response }, Cmd.none )
@@ -107,18 +111,18 @@ update msg model =
 
         YearFacetChanged facet checked ->
             if checked then
-                ( { model | selectedYearFacets = model.selectedYearFacets ++ [ facet ] }, fetchRecipes model.selectedYearFacets model.selectedCategoryFacets model.searchTerm )
+                ( { model | selectedYearFacets = model.selectedYearFacets ++ [ facet ] }, fetchRecipes model.selectedYearFacets model.selectedCategoryFacets model.searchTerm model.searchServiceUrl model.searchServiceApiKey )
 
             else
-                ( { model | selectedYearFacets = List.filter (\s -> s /= facet) model.selectedYearFacets }, fetchRecipes model.selectedYearFacets model.selectedCategoryFacets model.searchTerm )
+                ( { model | selectedYearFacets = List.filter (\s -> s /= facet) model.selectedYearFacets }, fetchRecipes model.selectedYearFacets model.selectedCategoryFacets model.searchTerm model.searchServiceUrl model.searchServiceApiKey)
 
         --List.filter (\s -> s == facet.category) selected
         CategoryFacetChanged facet checked ->
             if checked then
-                ( { model | selectedCategoryFacets = model.selectedCategoryFacets ++ [ facet ] }, fetchRecipes model.selectedYearFacets model.selectedCategoryFacets model.searchTerm )
+                ( { model | selectedCategoryFacets = model.selectedCategoryFacets ++ [ facet ] }, fetchRecipes model.selectedYearFacets model.selectedCategoryFacets model.searchTerm model.searchServiceUrl model.searchServiceApiKey )
 
             else
-                ( { model | selectedCategoryFacets = List.filter (\s -> s /= facet) model.selectedCategoryFacets }, fetchRecipes model.selectedYearFacets model.selectedCategoryFacets model.searchTerm )
+                ( { model | selectedCategoryFacets = List.filter (\s -> s /= facet) model.selectedCategoryFacets }, fetchRecipes model.selectedYearFacets model.selectedCategoryFacets model.searchTerm model.searchServiceUrl model.searchServiceApiKey)
 
 
 
@@ -170,7 +174,7 @@ viewRecipes : List Recipe -> Html Msg
 viewRecipes recipes =
     div []
         [ table [ class "table is-striped" ]
-            ( viewTableHeader  :: List.map viewRecipe recipes)
+            (viewTableHeader :: List.map viewRecipe recipes)
         ]
 
 
@@ -211,7 +215,7 @@ viewCategoryFacet selected facet =
             not (List.isEmpty (List.filter (\s -> s == facet.category) selected))
     in
     label [ class "panel-block" ]
-        [ input [ type_ "checkbox", checked isChecked, onCheck (CategoryFacetChanged facet.category ) ] []
+        [ input [ type_ "checkbox", checked isChecked, onCheck (CategoryFacetChanged facet.category) ] []
         , text (facet.category ++ " (" ++ String.fromInt facet.count ++ ")")
         ]
 
@@ -241,13 +245,13 @@ viewFacets categoryFacets yearFacets selectedCategoryFacets selectedYearFacets =
     in
     div []
         [ nav [ class "panel" ]
-            ( panelHeading "Filter By Category" 
+            (panelHeading "Filter By Category"
                 :: List.map
                     viewCatFacetWithSelect
                     categoryFacets
             )
         , nav [ class "panel" ]
-            ( panelHeading "Filter By Year" 
+            (panelHeading "Filter By Year"
                 :: List.map viewYearFacetWithSelect yearFacets
             )
         ]
@@ -323,7 +327,13 @@ buildErrorMessage httpError =
             message
 
 
-main : Program () Model Msg
+type alias Flags =
+    { searchServiceUrl : String
+    , searchApiKey : String
+    }
+
+
+main : Program Flags Model Msg
 main =
     Browser.element
         { init = init
