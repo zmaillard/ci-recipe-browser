@@ -1,6 +1,8 @@
-const webpack = require("webpack");
+const TerserPlugin = require("terser-webpack-plugin");
+const { merge } = require("webpack-merge");
+const baseConfig = require("./webpack.base.config");
 
-module.exports = () => ({
+module.exports = merge(baseConfig, {
   output: {
     filename: "[name].[contenthash].js",
   },
