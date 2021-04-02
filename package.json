@@ -12,6 +12,8 @@
     "preprod": "rimraf dist"
   },
   "devDependencies": {
+    "@babel/core": "^7.13.14",
+    "babel-loader": "^8.2.2",
     "copy-webpack-plugin": "^8.1.0",
     "dotenv": "^8.2.0",
     "elm": "^0.19.1-5",
