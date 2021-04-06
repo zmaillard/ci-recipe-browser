@@ -116,24 +116,12 @@ update msg model =
                     if checked then
                         model.selectedYearFacets ++ [ facet ]
 
-<<<<<<< HEAD
-            else
-                ( { model | selectedYearFacets = List.filter (\s -> s /= facet) model.selectedYearFacets }, fetchRecipes model.selectedYearFacets model.selectedCategoryFacets model.searchTerm model.searchServiceUrl model.searchServiceApiKey )
-=======
                     else
                         List.filter (\s -> s /= facet) model.selectedYearFacets
             in
             ( { model | selectedYearFacets = updatedYearFacets }, fetchRecipes updatedYearFacets model.selectedCategoryFacets model.searchTerm model.searchServiceUrl model.searchServiceApiKey )
->>>>>>> origin/main
 
         CategoryFacetChanged facet checked ->
-<<<<<<< HEAD
-            if checked then
-                ( { model | selectedCategoryFacets = model.selectedCategoryFacets ++ [ facet ] }, fetchRecipes model.selectedYearFacets model.selectedCategoryFacets model.searchTerm model.searchServiceUrl model.searchServiceApiKey )
-
-            else
-                ( { model | selectedCategoryFacets = List.filter (\s -> s /= facet) model.selectedCategoryFacets }, fetchRecipes model.selectedYearFacets model.selectedCategoryFacets model.searchTerm model.searchServiceUrl model.searchServiceApiKey )
-=======
             let
                 updatedCategoryFacets =
                     if checked then
@@ -143,13 +131,17 @@ update msg model =
                         List.filter (\s -> s /= facet) model.selectedCategoryFacets
             in
             ( { model | selectedCategoryFacets = updatedCategoryFacets }, fetchRecipes model.selectedYearFacets updatedCategoryFacets model.searchTerm model.searchServiceUrl model.searchServiceApiKey )
->>>>>>> origin/main
 
         RemoveFacet facet ->
+            let
+                updatedCategoryFacets = List.filter (\s -> s /= facet) model.selectedCategoryFacets
+                updatedYearFacets = List.filter (\s -> s /= facet) model.selectedYearFacets
+            in
+            
             ( { model 
-                  | selectedYearFacets = List.filter (\s -> s /= facet) model.selectedYearFacets 
-                  , selectedCategoryFacets = List.filter (\s -> s /= facet) model.selectedCategoryFacets 
-              }, fetchRecipes model.selectedYearFacets model.selectedCategoryFacets model.searchTerm model.searchServiceUrl model.searchServiceApiKey )
+                  | selectedYearFacets = updatedYearFacets
+                  , selectedCategoryFacets = updatedCategoryFacets
+              }, fetchRecipes updatedYearFacets updatedCategoryFacets model.searchTerm model.searchServiceUrl model.searchServiceApiKey )
 
 
 -- VIEWS
