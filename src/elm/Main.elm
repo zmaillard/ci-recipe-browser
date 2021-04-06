@@ -38,9 +38,10 @@ type alias Model =
     , searchServiceApiKey : String
     }
 
-
+  
 type Msg
     = SendHttpRequest
+    | RemoveFacet String
     | RecipesReceived (WebData IndexResult)
     | CategoryFacetChanged String Bool
     | YearFacetChanged String Bool
@@ -114,16 +115,20 @@ update msg model =
                 ( { model | selectedYearFacets = model.selectedYearFacets ++ [ facet ] }, fetchRecipes model.selectedYearFacets model.selectedCategoryFacets model.searchTerm model.searchServiceUrl model.searchServiceApiKey )
 
             else
-                ( { model | selectedYearFacets = List.filter (\s -> s /= facet) model.selectedYearFacets }, fetchRecipes model.selectedYearFacets model.selectedCategoryFacets model.searchTerm model.searchServiceUrl model.searchServiceApiKey)
+                ( { model | selectedYearFacets = List.filter (\s -> s /= facet) model.selectedYearFacets }, fetchRecipes model.selectedYearFacets model.selectedCategoryFacets model.searchTerm model.searchServiceUrl model.searchServiceApiKey )
 
-        --List.filter (\s -> s == facet.category) selected
         CategoryFacetChanged facet checked ->
             if checked then
                 ( { model | selectedCategoryFacets = model.selectedCategoryFacets ++ [ facet ] }, fetchRecipes model.selectedYearFacets model.selectedCategoryFacets model.searchTerm model.searchServiceUrl model.searchServiceApiKey )
 
             else
-                ( { model | selectedCategoryFacets = List.filter (\s -> s /= facet) model.selectedCategoryFacets }, fetchRecipes model.selectedYearFacets model.selectedCategoryFacets model.searchTerm model.searchServiceUrl model.searchServiceApiKey)
+                ( { model | selectedCategoryFacets = List.filter (\s -> s /= facet) model.selectedCategoryFacets }, fetchRecipes model.selectedYearFacets model.selectedCategoryFacets model.searchTerm model.searchServiceUrl model.searchServiceApiKey )
 
+        RemoveFacet facet ->
+            ( { model 
+                  | selectedYearFacets = List.filter (\s -> s /= facet) model.selectedYearFacets 
+                  , selectedCategoryFacets = List.filter (\s -> s /= facet) model.selectedCategoryFacets 
+              }, fetchRecipes model.selectedYearFacets model.selectedCategoryFacets model.searchTerm model.searchServiceUrl model.searchServiceApiKey )
 
 
 -- VIEWS
@@ -133,7 +138,32 @@ view : Model -> Html Msg
 view model =
     div []
         [ viewSearchBox
+        , viewChips model
         , viewContents model
+        ]
+
+
+chip : String -> Html Msg
+chip facet =
+    div [ class "control" ]
+        [ div [ class "tags has-addons" ]
+            [ span [ class "tag" ] [ text facet ]
+            , a [ class "tag is-delete", onClick (RemoveFacet facet) ] []
+            ]
+        ]
+
+
+viewChips : Model -> Html Msg
+viewChips model =
+    let
+        chips =
+            List.concat [ model.selectedYearFacets, model.selectedCategoryFacets ]
+    in
+    div [ class "container" ]
+        [ div [ class "column is-8 is-offset-2" ]
+            [ div [ class "field is-grouped is-grouped-multiline" ]
+                (List.map (\k -> chip k) chips)
+            ]
         ]
 
 
