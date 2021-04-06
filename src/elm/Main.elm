@@ -38,9 +38,10 @@ type alias Model =
     , searchServiceApiKey : String
     }
 
-
+  
 type Msg
     = SendHttpRequest
+    | RemoveFacet String
     | RecipesReceived (WebData IndexResult)
     | CategoryFacetChanged String Bool
     | YearFacetChanged String Bool
@@ -120,7 +121,6 @@ update msg model =
             in
             ( { model | selectedYearFacets = updatedYearFacets }, fetchRecipes updatedYearFacets model.selectedCategoryFacets model.searchTerm model.searchServiceUrl model.searchServiceApiKey )
 
-        --List.filter (\s -> s == facet.category) selected
         CategoryFacetChanged facet checked ->
             let
                 updatedCategoryFacets =
@@ -132,6 +132,16 @@ update msg model =
             in
             ( { model | selectedCategoryFacets = updatedCategoryFacets }, fetchRecipes model.selectedYearFacets updatedCategoryFacets model.searchTerm model.searchServiceUrl model.searchServiceApiKey )
 
+        RemoveFacet facet ->
+            let
+                updatedCategoryFacets = List.filter (\s -> s /= facet) model.selectedCategoryFacets
+                updatedYearFacets = List.filter (\s -> s /= facet) model.selectedYearFacets
+            in
+            
+            ( { model 
+                  | selectedYearFacets = updatedYearFacets
+                  , selectedCategoryFacets = updatedCategoryFacets
+              }, fetchRecipes updatedYearFacets updatedCategoryFacets model.searchTerm model.searchServiceUrl model.searchServiceApiKey )
 
 
 -- VIEWS
@@ -141,7 +151,32 @@ view : Model -> Html Msg
 view model =
     div []
         [ viewSearchBox
+        , viewChips model
         , viewContents model
+        ]
+
+
+chip : String -> Html Msg
+chip facet =
+    div [ class "control" ]
+        [ div [ class "tags has-addons" ]
+            [ span [ class "tag" ] [ text facet ]
+            , a [ class "tag is-delete", onClick (RemoveFacet facet) ] []
+            ]
+        ]
+
+
+viewChips : Model -> Html Msg
+viewChips model =
+    let
+        chips =
+            List.concat [ model.selectedYearFacets, model.selectedCategoryFacets ]
+    in
+    div [ class "container" ]
+        [ div [ class "column is-8 is-offset-2" ]
+            [ div [ class "field is-grouped is-grouped-multiline" ]
+                (List.map (\k -> chip k) chips)
+            ]
         ]
 
 
