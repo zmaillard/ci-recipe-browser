@@ -111,18 +111,39 @@ update msg model =
             ( { model | searchTerm = searchTerm }, Cmd.none )
 
         YearFacetChanged facet checked ->
-            if checked then
-                ( { model | selectedYearFacets = model.selectedYearFacets ++ [ facet ] }, fetchRecipes model.selectedYearFacets model.selectedCategoryFacets model.searchTerm model.searchServiceUrl model.searchServiceApiKey )
+            let
+                updatedYearFacets =
+                    if checked then
+                        model.selectedYearFacets ++ [ facet ]
 
+<<<<<<< HEAD
             else
                 ( { model | selectedYearFacets = List.filter (\s -> s /= facet) model.selectedYearFacets }, fetchRecipes model.selectedYearFacets model.selectedCategoryFacets model.searchTerm model.searchServiceUrl model.searchServiceApiKey )
+=======
+                    else
+                        List.filter (\s -> s /= facet) model.selectedYearFacets
+            in
+            ( { model | selectedYearFacets = updatedYearFacets }, fetchRecipes updatedYearFacets model.selectedCategoryFacets model.searchTerm model.searchServiceUrl model.searchServiceApiKey )
+>>>>>>> origin/main
 
         CategoryFacetChanged facet checked ->
+<<<<<<< HEAD
             if checked then
                 ( { model | selectedCategoryFacets = model.selectedCategoryFacets ++ [ facet ] }, fetchRecipes model.selectedYearFacets model.selectedCategoryFacets model.searchTerm model.searchServiceUrl model.searchServiceApiKey )
 
             else
                 ( { model | selectedCategoryFacets = List.filter (\s -> s /= facet) model.selectedCategoryFacets }, fetchRecipes model.selectedYearFacets model.selectedCategoryFacets model.searchTerm model.searchServiceUrl model.searchServiceApiKey )
+=======
+            let
+                updatedCategoryFacets =
+                    if checked then
+                        model.selectedCategoryFacets ++ [ facet ]
+
+                    else
+                        List.filter (\s -> s /= facet) model.selectedCategoryFacets
+            in
+            ( { model | selectedCategoryFacets = updatedCategoryFacets }, fetchRecipes model.selectedYearFacets updatedCategoryFacets model.searchTerm model.searchServiceUrl model.searchServiceApiKey )
+>>>>>>> origin/main
 
         RemoveFacet facet ->
             ( { model 
