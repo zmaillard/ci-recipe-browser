@@ -19,3 +19,19 @@ jobs:
         env:
           SEARCH_KEY: ${{ secrets.SEARCH_KEY }}
           SEARCH_SERVICE: ${{ secrets.SEARCH_SERVICE }}
+
+      - uses: chrislennon/action-aws-cli@v1.1
+
+      - name: Upload S3
+        run: |
+            aws s3 sync dist/ s3://ci.sagebrushgis.com/
+        env:
+          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+
+      - name: Invalidate Cache
+        run: |
+            aws cloudfront create-invalidation --distribution-id E35686XIUW6DBM --paths /index.html 
+        env:
+          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
