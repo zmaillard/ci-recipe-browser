@@ -1,4 +1,4 @@
-module Recipe exposing (Recipe, recipesDecoder, recipeDecoder)
+module Recipe exposing (Recipe, recipesDecoder, recipeDecoder, formatDate)
 import Json.Decode exposing (Decoder, int, list, string, map6, field)
 
 type alias Recipe = 
@@ -9,6 +9,10 @@ type alias Recipe =
   , page: Int 
   , month : List String
   }
+
+formatDate : Recipe -> String
+formatDate  recipe = 
+  String.join ", " recipe.month ++ " " ++ String.fromInt recipe.year
 
 recipesDecoder : Decoder (List Recipe)
 recipesDecoder =

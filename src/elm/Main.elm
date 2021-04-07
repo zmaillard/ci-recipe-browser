@@ -6,7 +6,7 @@ import Html.Attributes exposing (..)
 import Html.Events exposing (onCheck, onClick, onInput)
 import Http
 import Json.Decode exposing (Decoder, Error(..), field, int, map2, map3, string)
-import Recipe exposing (Recipe, recipesDecoder)
+import Recipe exposing (Recipe, recipesDecoder, formatDate)
 import RemoteData exposing (WebData)
 
 
@@ -216,7 +216,7 @@ viewSearchBox =
 viewRecipes : List Recipe -> Html Msg
 viewRecipes recipes =
     div []
-        [ table [ class "table is-striped" ]
+        [ table [ class "table is-hoverable is-narrow" ]
             (viewTableHeader :: List.map viewRecipe recipes)
         ]
 
@@ -228,9 +228,11 @@ viewTableHeader =
             [ th []
                 [ text "Issue" ]
             , th []
-                [ text "Year" ]
+                [ text "Date" ]
             , th []
                 [ text "Recipe Name" ]
+            , th []
+                [ text "Page" ]
             , th []
                 [ text "Category" ]
             ]
@@ -243,9 +245,11 @@ viewRecipe recipe =
         [ td []
             [ text recipe.issue ]
         , td []
-            [ text (String.fromInt recipe.year) ]
+            [ text (formatDate recipe ) ]
         , td []
             [ text recipe.recipe ]
+        , td []
+            [ text (String.fromInt recipe.page) ]
         , td []
             [ text recipe.category ]
         ]
