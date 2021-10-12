@@ -1,0 +1,21 @@
+name: Build Recipe Browser
+
+on: [pull_request]
+
+jobs:
+  build-and-test:
+    runs-on: ubuntu-latest
+    steps:
+      - name: "checkout github action"
+        uses: actions/checkout@v2.3.4
+
+      - uses: actions/setup-node@v1
+        with:
+          node-version: 10.17.0
+
+      - run: yarn install
+
+      - run: yarn run prod
+        env:
+          SEARCH_KEY: ${{ secrets.SEARCH_KEY }}
+          SEARCH_SERVICE: ${{ secrets.SEARCH_SERVICE }}
