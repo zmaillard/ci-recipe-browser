@@ -6,12 +6,40 @@ jobs:
   build-and-test:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@master
+      - name: "checkout github action"
+        uses: actions/checkout@v2.3.4
+        with:
+          fetch-depth: '0'
+
+      - name: Bump version and push tag
+        uses: anothrNick/github-tag-action@1.26.0
+        id: bump-version
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          WITH_V: true
+          DEFAULT_BUMP: patch
+          RELEASE_BRANCHES: main
+          VERBOSE: false
+          DRY_RUN: true
+
+      - name: Remove Leading v From Version Number
+        shell: bash
+        run: |
+          # Retreive Version Number from previous job, and remove the leading v from it
+          # v1.2.3 => 1.2.3
+          # Add to environment variable for future use
+          version=$(echo "${{ steps.bump-version.outputs.tag}}" | sed "s/^v//")
+          echo "VERSION=${version}" >> $GITHUB_ENV
 
       - uses: actions/setup-node@v1
         with:
           node-version: 10.17.0
 
       - run: yarn install
+
+      - name: Set Yarn Version Number 
+        shell: bash
+        run:
+          yarn version --no-git-tag-version --new-version "${{env.VERSION}}"
 
       - run: yarn run prod
