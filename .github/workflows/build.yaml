@@ -21,6 +21,7 @@ jobs:
           RELEASE_BRANCHES: main
           VERBOSE: false
           DRY_RUN: true
+          INITIAL_VERSION: 0.1.0
 
       - name: Remove Leading v From Version Number
         shell: bash
@@ -43,3 +44,6 @@ jobs:
           yarn version --no-git-tag-version --new-version "${{env.VERSION}}"
 
       - run: yarn run prod
+        env:
+          SEARCH_KEY: ${{ secrets.SEARCH_KEY }}
+          SEARCH_SERVICE: ${{ secrets.SEARCH_SERVICE }}
