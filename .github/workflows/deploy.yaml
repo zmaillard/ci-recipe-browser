@@ -6,7 +6,7 @@ on:
       - main
 
 jobs:
-  build:
+  deploy:
     runs-on: ubuntu-20.04
     steps:
       - name: "checkout github action"
@@ -51,8 +51,6 @@ jobs:
         env:
           SEARCH_KEY: ${{ secrets.SEARCH_KEY }}
           SEARCH_SERVICE: ${{ secrets.SEARCH_SERVICE }}
-
-      - uses: chrislennon/action-aws-cli@v1.1
 
       - name: Upload S3
         run: |
