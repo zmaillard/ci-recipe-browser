@@ -1,3 +1,5 @@
+name: Deploy Recipe Browser
+
 on:
   push:
     branches:
