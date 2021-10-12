@@ -1,0 +1,17 @@
+name: Build Recipe Browser
+
+on: [pull_request]
+
+jobs:
+  build-and-test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@master
+
+      - uses: actions/setup-node@v1
+        with:
+          node-version: 10.17.0
+
+      - run: yarn install
+
+      - run: yarn run prod
