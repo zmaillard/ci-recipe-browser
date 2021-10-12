@@ -21,6 +21,7 @@ jobs:
           DEFAULT_BUMP: patch
           RELEASE_BRANCHES: main
           VERBOSE: false
+          INITIAL_VERSION: 0.1.0
 
       - name: Remove Leading v From Version Number
         shell: bash
