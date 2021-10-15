@@ -1,14 +1,15 @@
 module Main exposing (init, main)
 
 import Browser
+import Browser.Navigation as Nav
 import Html exposing (..)
 import Html.Attributes exposing (..)
 import Html.Events exposing (onCheck, onClick, onInput)
 import Http
 import Json.Decode exposing (Decoder, Error(..), field, int, map2, map3, string)
-import Recipe exposing (Recipe, recipesDecoder, formatDate)
+import Recipe exposing (Recipe, formatDate, formatTitle, recipesDecoder)
 import RemoteData exposing (WebData)
-import Recipe exposing (formatTitle)
+import Url
 
 
 type alias YearFacet =
@@ -39,7 +40,7 @@ type alias Model =
     , searchServiceApiKey : String
     }
 
-  
+
 type Msg
     = SendHttpRequest
     | RemoveFacet String
@@ -49,8 +50,8 @@ type Msg
     | SearchTermChanged String
 
 
-init : Flags -> ( Model, Cmd Msg )
-init flags =
+init : Flags -> Url.Url -> Nav.Key -> ( Model, Cmd Msg )
+init flags _ _ =
     ( { results = RemoteData.Loading
       , selectedYearFacets = []
       , selectedCategoryFacets = []
@@ -135,26 +136,35 @@ update msg model =
 
         RemoveFacet facet ->
             let
-                updatedCategoryFacets = List.filter (\s -> s /= facet) model.selectedCategoryFacets
-                updatedYearFacets = List.filter (\s -> s /= facet) model.selectedYearFacets
+                updatedCategoryFacets =
+                    List.filter (\s -> s /= facet) model.selectedCategoryFacets
+
+                updatedYearFacets =
+                    List.filter (\s -> s /= facet) model.selectedYearFacets
             in
-            
-            ( { model 
-                  | selectedYearFacets = updatedYearFacets
-                  , selectedCategoryFacets = updatedCategoryFacets
-              }, fetchRecipes updatedYearFacets updatedCategoryFacets model.searchTerm model.searchServiceUrl model.searchServiceApiKey )
+            ( { model
+                | selectedYearFacets = updatedYearFacets
+                , selectedCategoryFacets = updatedCategoryFacets
+              }
+            , fetchRecipes updatedYearFacets updatedCategoryFacets model.searchTerm model.searchServiceUrl model.searchServiceApiKey
+            )
+
 
 
 -- VIEWS
 
 
-view : Model -> Html Msg
+view : Model -> Browser.Document Msg
 view model =
-    div []
-        [ viewSearchBox
-        , viewChips model
-        , viewContents model
+    { title = "Recipe Search"
+    , body =
+        [ div []
+            [ viewSearchBox
+            , viewChips model
+            , viewContents model
+            ]
         ]
+    }
 
 
 chip : String -> Html Msg
@@ -244,15 +254,15 @@ viewRecipe : Recipe -> Html Msg
 viewRecipe recipe =
     tr []
         [ td []
-            [ text (String.fromInt(recipe.issue)) ]
+            [ text (String.fromInt recipe.issue) ]
         , td []
-            [ text (formatDate recipe ) ]
+            [ text (formatDate recipe) ]
         , td []
-            [ text (formatTitle recipe ) ]
+            [ text (formatTitle recipe) ]
         , td []
             [ text (String.fromInt recipe.page) ]
         , td []
-            [ text  (String.join ", " recipe.categories) ]
+            [ text (String.join ", " recipe.categories) ]
         ]
 
 
@@ -383,11 +393,13 @@ type alias Flags =
 
 main : Program Flags Model Msg
 main =
-    Browser.element
+    Browser.application
         { init = init
         , view = view
         , update = update
         , subscriptions = \_ -> Sub.none
+        , onUrlRequest = \_ -> msg.none
+        , onUrlChange = \_ -> msg.none 
         }
 
 
