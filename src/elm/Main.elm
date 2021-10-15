@@ -8,6 +8,7 @@ import Http
 import Json.Decode exposing (Decoder, Error(..), field, int, map2, map3, string)
 import Recipe exposing (Recipe, recipesDecoder, formatDate)
 import RemoteData exposing (WebData)
+import Recipe exposing (formatTitle)
 
 
 type alias YearFacet =
@@ -78,7 +79,7 @@ buildFilters yearFacets categoryFacets =
             String.join " or " (List.map (\s -> "year eq " ++ s) yearFacets)
 
         categoryFacet =
-            String.join " or " (List.map (\s -> "category eq '" ++ s ++ "'") categoryFacets)
+            String.join " or " (List.map (\s -> "categories/any(c: c eq '" ++ s ++ "')") categoryFacets)
     in
     if String.isEmpty yearFacet && String.isEmpty categoryFacet then
         ""
@@ -95,7 +96,7 @@ buildFilters yearFacets categoryFacets =
 
 buildSearchUrl : String -> String -> List String -> List String -> String -> String
 buildSearchUrl url apiKey yearFacets categoryFacets searchTerm =
-    url ++ "/docs?search=" ++ searchTerm ++ buildFilters yearFacets categoryFacets ++ "&api-version=2020-06-30-Preview&facet=category&facet=year&api-key=" ++ apiKey
+    url ++ "/docs?search=" ++ searchTerm ++ buildFilters yearFacets categoryFacets ++ "&api-version=2020-06-30-Preview&facet=categories&facet=year&api-key=" ++ apiKey
 
 
 update : Msg -> Model -> ( Model, Cmd Msg )
@@ -243,15 +244,15 @@ viewRecipe : Recipe -> Html Msg
 viewRecipe recipe =
     tr []
         [ td []
-            [ text recipe.issue ]
+            [ text (String.fromInt(recipe.issue)) ]
         , td []
             [ text (formatDate recipe ) ]
         , td []
-            [ text recipe.recipe ]
+            [ text (formatTitle recipe ) ]
         , td []
             [ text (String.fromInt recipe.page) ]
         , td []
-            [ text recipe.category ]
+            [ text  (String.join ", " recipe.categories) ]
         ]
 
 
@@ -406,7 +407,7 @@ yearFacetDecoder =
 categoryFacetDecoder : Decoder (List CategoryFacet)
 categoryFacetDecoder =
     field "@search.facets"
-        (field "category"
+        (field "categories"
             (Json.Decode.list
                 (map2 CategoryFacet
                     (field "value" string)
