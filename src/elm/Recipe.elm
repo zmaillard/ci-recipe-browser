@@ -1,18 +1,29 @@
-module Recipe exposing (Recipe, recipesDecoder, recipeDecoder, formatDate)
-import Json.Decode exposing (Decoder, int, list, string, map6, field)
+module Recipe exposing (Recipe, recipesDecoder, recipeDecoder, formatDate, formatTitle)
+import Json.Decode exposing (Decoder, int, list, string, map7, field)
+import Json.Decode exposing (maybe)
+import Maybe
 
 type alias Recipe = 
-  { issue : String
+  { issue : Int
+  , months : String
   , year : Int
-  , recipe : String
-  , category: String
+  , mainTitle : Maybe String
+  , coverTitle : Maybe String
+  , categories : List String
   , page: Int 
-  , month : List String
   }
+
+formatTitle: Recipe -> String
+formatTitle recipe =
+  case recipe.mainTitle of
+    Just val ->
+      val
+    Nothing ->
+      Maybe.withDefault "" recipe.coverTitle 
 
 formatDate : Recipe -> String
 formatDate  recipe = 
-  String.join ", " recipe.month ++ " " ++ String.fromInt recipe.year
+  recipe.months ++ " " ++ String.fromInt recipe.year
 
 recipesDecoder : Decoder (List Recipe)
 recipesDecoder =
@@ -21,10 +32,11 @@ recipesDecoder =
 
 recipeDecoder : Decoder Recipe
 recipeDecoder =
-  map6 Recipe
-    (field "issue" string)
+  map7 Recipe
+    (field "issue" int)
+    (field "months" string)
     (field "year" int)
-    (field "recipe" string)
-    (field "category" string)
+    (maybe (field "mainTitle" string))
+    (maybe (field "coverTitle"  string))
+    (field "categories" (list string))
     (field "page" int)
-    (field "months" (list string))
