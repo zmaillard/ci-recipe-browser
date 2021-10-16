@@ -47,7 +47,7 @@ jobs:
         run:
           yarn version --no-git-tag-version --new-version "${{env.VERSION}}"
 
-      - run: yarn run prod
+      - run: yarn run build
         env:
           SEARCH_KEY: ${{ secrets.SEARCH_KEY }}
           SEARCH_SERVICE: ${{ secrets.SEARCH_SERVICE }}
