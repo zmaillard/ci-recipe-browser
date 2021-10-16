@@ -2,7 +2,7 @@
   "name": "ci-recipe-browser",
   "version": "0.0.1",
   "description": "Cooks Illustrated Recipe Browser",
-  "main": "index.js",
+  "main": "dist/index.html",
   "repository": "git@github.com:zmaillard/ci-recipe-browser.git",
   "author": "Zachary Maillard <zmaillard@protonmail.com>",
   "license": "MIT",
