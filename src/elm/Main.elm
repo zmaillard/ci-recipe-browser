@@ -10,7 +10,12 @@ import Json.Decode exposing (Decoder, Error(..), field, int, map2, map3, string)
 import Recipe exposing (Recipe, formatDate, formatTitle, recipesDecoder)
 import RemoteData exposing (WebData)
 import Url
+import Url.Parser exposing((<?>))
+import Url.Parser.Query
 
+type Route 
+    = DefaultUrl
+    | SearchUrl (Maybe String)
 
 type alias YearFacet =
     { year : Int
@@ -38,6 +43,8 @@ type alias Model =
     , searchTerm : String
     , searchServiceUrl : String
     , searchServiceApiKey : String
+    , route : Maybe Route
+    , navKey : Nav.Key
     }
 
 
@@ -48,18 +55,48 @@ type Msg
     | CategoryFacetChanged String Bool
     | YearFacetChanged String Bool
     | SearchTermChanged String
+    | LinkClicked Browser.UrlRequest
+    | UrlChanged Url.Url
 
+urlParser : Url.Parser.Parser (Route -> a) a
+urlParser = 
+  Url.Parser.oneOf
+      [ Url.Parser.map DefaultUrl <| Url.Parser.top
+      ,  Url.Parser.map SearchUrl <| Url.Parser.s "search" 
+           <?>  Url.Parser.Query.string "q"
+      ]
+
+initSearchTerm: Maybe Route -> String
+initSearchTerm route = 
+  case route of
+    Just searchUrl ->
+      case searchUrl of
+        SearchUrl search ->
+          Maybe.withDefault "*" search
+        _ ->
+          "*"
+    _ ->
+      "*" 
 
 init : Flags -> Url.Url -> Nav.Key -> ( Model, Cmd Msg )
-init flags _ _ =
+init flags url navKey =
+    let
+        initRoute = Url.Parser.parse urlParser url 
+        initSearch = initSearchTerm  initRoute 
+        
+          
+    in
+    
     ( { results = RemoteData.Loading
       , selectedYearFacets = []
       , selectedCategoryFacets = []
-      , searchTerm = "*"
+      , searchTerm = initSearch
       , searchServiceUrl = flags.searchServiceUrl
       , searchServiceApiKey = flags.searchApiKey
+      , route = initRoute
+      , navKey = navKey
       }
-    , fetchRecipes [] [] "*" flags.searchServiceUrl flags.searchApiKey
+    , fetchRecipes [] [] initSearch flags.searchServiceUrl flags.searchApiKey
     )
 
 
@@ -103,6 +140,17 @@ buildSearchUrl url apiKey yearFacets categoryFacets searchTerm =
 update : Msg -> Model -> ( Model, Cmd Msg )
 update msg model =
     case msg of
+        LinkClicked urlRequest ->
+            case urlRequest of
+                Browser.Internal url ->
+                    ( model, Nav.pushUrl model.navKey (Url.toString url) )
+
+                Browser.External url ->
+                    ( model, Nav.load url )
+
+        UrlChanged url ->
+            ( { model | route = Url.Parser.parse urlParser url }, Cmd.none )
+
         SendHttpRequest ->
             ( { model | results = RemoteData.Loading }, fetchRecipes model.selectedYearFacets model.selectedCategoryFacets model.searchTerm model.searchServiceUrl model.searchServiceApiKey )
 
@@ -398,8 +446,8 @@ main =
         , view = view
         , update = update
         , subscriptions = \_ -> Sub.none
-        , onUrlRequest = \_ -> msg.none
-        , onUrlChange = \_ -> msg.none 
+        , onUrlRequest = LinkClicked
+        , onUrlChange = UrlChanged
         }
 
 
