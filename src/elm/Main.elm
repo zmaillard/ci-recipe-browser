@@ -243,10 +243,10 @@ viewContents : Model -> Html Msg
 viewContents model =
     div [ class "container" ]
         [ div [ class "columns" ]
-            [ div [ class "column is-3" ]
-                [ viewFacetsOrError model ]
-            , div [ class "column is-9" ]
+            [ div [ class "column is-9" ]
                 [ viewRecipesOrError model
+            , div [ class "column is-3" ]
+                [ viewFacetsOrError model ]
                 ]
             ]
         ]
