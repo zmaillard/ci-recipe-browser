@@ -244,10 +244,9 @@ viewContents model =
     div [ class "container" ]
         [ div [ class "columns" ]
             [ div [ class "column is-9" ]
-                [ viewRecipesOrError model
+                [ viewRecipesOrError model ]
             , div [ class "column is-3" ]
                 [ viewFacetsOrError model ]
-                ]
             ]
         ]
 
