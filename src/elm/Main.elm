@@ -207,7 +207,7 @@ view model =
     { title = "Recipe Search"
     , body =
         [ div []
-            [ viewSearchBox
+            [ viewSearchBox model.searchTerm
             , viewChips model
             , viewContents model
             ]
@@ -251,14 +251,18 @@ viewContents model =
         ]
 
 
-viewSearchBox : Html Msg
-viewSearchBox =
+viewSearchBox : String -> Html Msg
+viewSearchBox defaultSearch =
+    let
+        fixedTerm = if defaultSearch == "*" then "" else defaultSearch
+    in
+    
     div [ class "container has-text-centered" ]
         [ div [ class "column is-6 is-offset-3" ]
             [ div [ class "box" ]
                 [ div [ class "field is-grouped" ]
                     [ p [ class "control is-expanded" ]
-                        [ input [ type_ "text", placeholder "Search For Recipes", class "input", onInput SearchTermChanged ]
+                        [ input [ type_ "text", value fixedTerm, placeholder "Search For Recipes", class "input", onInput SearchTermChanged ]
                             []
                         ]
                     , p [ class "control" ]
