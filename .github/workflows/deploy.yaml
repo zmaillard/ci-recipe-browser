@@ -61,8 +61,8 @@ jobs:
 
       - name: Upload S3
         run: |
-            aws s3 sync dist/ s3://ci.sagebrushgis.com/
+            aws s3 sync dist/ s3://recipesear.ch/
 
       - name: Invalidate Cache
         run: |
-            aws cloudfront create-invalidation --distribution-id E35686XIUW6DBM --paths /index.html 
+            aws cloudfront create-invalidation --distribution-id E25LBYOO4MASN6 --paths /index.html 
