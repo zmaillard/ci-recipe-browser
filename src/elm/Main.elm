@@ -12,6 +12,10 @@ import RemoteData exposing (WebData)
 import Url
 import Url.Parser exposing((<?>))
 import Url.Parser.Query
+import Browser.Events exposing (onKeyDown)
+import Authentication
+import Ports exposing(pageLoaded, auth0Authorize, auth0Logout, auth0AuthResult)
+import Auth0
 
 type Route 
     = DefaultUrl
@@ -45,6 +49,7 @@ type alias Model =
     , searchServiceApiKey : String
     , route : Maybe Route
     , navKey : Nav.Key
+    , authModel : Authentication.Model
     }
 
 
@@ -57,6 +62,7 @@ type Msg
     | SearchTermChanged String
     | LinkClicked Browser.UrlRequest
     | UrlChanged Url.Url
+    | AuthenticationMsg Authentication.Msg
 
 urlParser : Url.Parser.Parser (Route -> a) a
 urlParser = 
@@ -84,6 +90,18 @@ init flags url navKey =
         initRoute = Url.Parser.parse urlParser url 
         initSearch = initSearchTerm  initRoute 
         
+        initUser = Auth0.convert flags.initialUser |> Auth0.mapResult
+    
+        
+          
+        user = case initUser of
+            Ok u ->
+                Just u
+
+            Err _ ->
+               Maybe.Nothing 
+
+          
           
     in
     
@@ -95,8 +113,9 @@ init flags url navKey =
       , searchServiceApiKey = flags.searchApiKey
       , route = initRoute
       , navKey = navKey
+      , authModel = Authentication.init auth0Authorize auth0Logout user
       }
-    , fetchRecipes [] [] initSearch flags.searchServiceUrl flags.searchApiKey
+    , Cmd.batch [pageLoaded "", fetchRecipes [] [] initSearch flags.searchServiceUrl flags.searchApiKey ]
     )
 
 
@@ -140,6 +159,13 @@ buildSearchUrl url apiKey yearFacets categoryFacets searchTerm =
 update : Msg -> Model -> ( Model, Cmd Msg )
 update msg model =
     case msg of
+        AuthenticationMsg authMsg ->
+            let
+                (authModel, cmd) =
+                    Authentication.update authMsg model.authModel
+            in
+            ( { model | authModel = authModel}, Cmd.map AuthenticationMsg cmd)
+
         LinkClicked urlRequest ->
             case urlRequest of
                 Browser.Internal url ->
@@ -152,7 +178,8 @@ update msg model =
             ( { model | route = Url.Parser.parse urlParser url }, Cmd.none )
 
         SendHttpRequest ->
-            ( { model | results = RemoteData.Loading }, fetchRecipes model.selectedYearFacets model.selectedCategoryFacets model.searchTerm model.searchServiceUrl model.searchServiceApiKey )
+            ( { model | results = RemoteData.Loading }, auth0Authorize {}  )
+            --( { model | results = RemoteData.Loading }, fetchRecipes model.selectedYearFacets model.selectedCategoryFacets model.searchTerm model.searchServiceUrl model.searchServiceApiKey )
 
         RecipesReceived response ->
             ( { model | results = response }, Cmd.none )
@@ -435,6 +462,7 @@ buildErrorMessage httpError =
 type alias Flags =
     { searchServiceUrl : String
     , searchApiKey : String
+    , initialUser : Json.Decode.Value 
     }
 
 
@@ -444,7 +472,7 @@ main =
         { init = init
         , view = view
         , update = update
-        , subscriptions = \_ -> Sub.none
+        , subscriptions = subscriptions
         , onUrlRequest = LinkClicked
         , onUrlChange = UrlChanged
         }
@@ -482,3 +510,7 @@ indexDecoder =
         yearFacetDecoder
         categoryFacetDecoder
         recipesDecoder
+
+subscriptions : Model -> Sub Msg
+subscriptions model =
+    auth0AuthResult (Authentication.handleAuthResult >> AuthenticationMsg)
