@@ -1,5 +1,5 @@
 import { createAuth0Client } from "@auth0/auth0-spa-js";
-
+import '@fortawesome/fontawesome-free/css/svg-with-js.min.css'
 const buildAuthToken = (accessToken, user) => {
   let result = { err: null, ok: null };
   if (accessToken != null && user != null) {
@@ -41,12 +41,15 @@ const buildAuthToken = (accessToken, user) => {
       searchServiceUrl: process.env.SEARCH_SERVICE,
       searchApiKey: process.env.SEARCH_KEY,
       initialUser: authToken,
+      botUrl: process.env.BOT_URL,
     },
   });
 
-  elmApp.ports.auth0Logout.subscribe(function (opts) {
+  elmApp.ports.auth0Logout.subscribe(async function (opts) {
     localStorage.removeItem("profile");
     localStorage.removeItem("token");
+    await auth0.logout();
+    elmApp.ports.auth0authResult.send(buildAuthToken("", ""));
   });
 
   elmApp.ports.auth0Authorize.subscribe(async function (opts) {

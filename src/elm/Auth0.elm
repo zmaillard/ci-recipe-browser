@@ -7,12 +7,12 @@ module Auth0 exposing
     , UserProfile
     , AuthenticationError
     , AuthenticationResult
-    , convert
+    , RawAuthenticationResult
+    , initRawAuthResult 
     , decodeRawAuthenticationResult  )
 
 import Json.Decode exposing(Decoder, succeed, string, nullable)
 import Json.Decode.Pipeline exposing (required, optional, hardcoded)
-import Json.Encode
 
 type alias LoggedInUser =
     { profile : UserProfile
@@ -45,18 +45,24 @@ type alias RawAuthenticationResult =
     , ok : Maybe LoggedInUser
     }
 
+initRawAuthResult : RawAuthenticationResult
+initRawAuthResult =
+    { err = Maybe.Nothing
+    , ok = Maybe.Nothing
+    }
 
-convert : Json.Encode.Value -> RawAuthenticationResult
-convert j =
-    let
-        u = Json.Decode.decodeValue decodeRawAuthenticationResult j 
-    in
-    case u of
-        Ok rawAuthResult ->
-            rawAuthResult
-        _ ->
-            { err = (Just { name = "No information was received from the authentication provider" })
-            , ok  = Maybe.Nothing }
+
+-- convert : Json.Encode.Value -> RawAuthenticationResult
+-- convert j =
+--     let
+--         u = Json.Decode.decodeValue decodeRawAuthenticationResult j 
+--     in
+--     case u of
+--         Ok rawAuthResult ->
+--             rawAuthResult
+--         _ ->
+--             { err = (Just { name = "No information was received from the authentication provider" })
+--             , ok  = Maybe.Nothing }
 
 
 mapResult : RawAuthenticationResult -> AuthenticationResult

@@ -1,4 +1,4 @@
-module Authentication exposing (Model, Msg, init, update,handleAuthResult )
+module Authentication exposing (Model, Msg, init, update, handleAuthResult, isLoggedIn )
 
 import Auth0
 import Json.Decode exposing (Decoder)
@@ -52,7 +52,9 @@ update msg model =
 
 handleAuthResult : Json.Encode.Value -> Msg
 handleAuthResult v = 
-    Auth0.convert v |> Auth0.mapResult |> AuthenticationResult     
+    Json.Decode.decodeValue Auth0.decodeRawAuthenticationResult v  
+        |> Result.withDefault Auth0.initRawAuthResult 
+        |> Auth0.mapResult |> AuthenticationResult     
 
 
 tryGetUserProfile : Model -> Maybe Auth0.UserProfile

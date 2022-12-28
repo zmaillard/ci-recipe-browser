@@ -1,25 +1,35 @@
 module Main exposing (init, main)
 
+import API.Bot exposing (BotUrl, FavoriteResult, NoteRecipeResult, getFavorites, getNote, updateFavorites)
+import Auth0
+import Authentication
 import Browser
+import Browser.Events exposing (onKeyDown)
 import Browser.Navigation as Nav
+import Favorite exposing (Favorites, toFavorite)
+import Flags exposing (Flags)
+import FontAwesome as Icon exposing (Icon)
+import FontAwesome.Solid as Icon
+import FontAwesome.Styles as Icon
 import Html exposing (..)
 import Html.Attributes exposing (..)
 import Html.Events exposing (onCheck, onClick, onInput)
 import Http
 import Json.Decode exposing (Decoder, Error(..), field, int, map2, map3, string)
+import Note exposing (fromNote)
+import Ports exposing (auth0AuthResult, auth0Authorize, auth0Logout, pageLoaded)
 import Recipe exposing (Recipe, formatDate, formatTitle, recipesDecoder)
-import RemoteData exposing (WebData)
+import RemoteData exposing (RemoteData(..), WebData)
 import Url
-import Url.Parser exposing((<?>))
+import Url.Parser exposing ((<?>))
 import Url.Parser.Query
-import Browser.Events exposing (onKeyDown)
-import Authentication
-import Ports exposing(pageLoaded, auth0Authorize, auth0Logout, auth0AuthResult)
-import Auth0
+import Views.NoteView as NoteView
 
-type Route 
+
+type Route
     = DefaultUrl
     | SearchUrl (Maybe String)
+
 
 type alias YearFacet =
     { year : Int
@@ -50,6 +60,9 @@ type alias Model =
     , route : Maybe Route
     , navKey : Nav.Key
     , authModel : Authentication.Model
+    , noteModel : NoteView.Model
+    , favorites : Favorites
+    , flags : Flags
     }
 
 
@@ -63,48 +76,73 @@ type Msg
     | LinkClicked Browser.UrlRequest
     | UrlChanged Url.Url
     | AuthenticationMsg Authentication.Msg
+    | NoteMsg NoteView.Msg
+    | LoginRequest
+    | LogoutRequest
+    | FavoriteChange Recipe
+    | GotFavorites (WebData (List FavoriteResult))
+    | ShowNote Recipe
+
 
 urlParser : Url.Parser.Parser (Route -> a) a
-urlParser = 
-  Url.Parser.oneOf
-      [ Url.Parser.map DefaultUrl <| Url.Parser.top
-      ,  Url.Parser.map SearchUrl <| Url.Parser.s "search" 
-           <?>  Url.Parser.Query.string "q"
-      ]
+urlParser =
+    Url.Parser.oneOf
+        [ Url.Parser.map DefaultUrl <| Url.Parser.top
+        , Url.Parser.map SearchUrl <|
+            Url.Parser.s "search"
+                <?> Url.Parser.Query.string "q"
+        ]
 
-initSearchTerm: Maybe Route -> String
-initSearchTerm route = 
-  case route of
-    Just searchUrl ->
-      case searchUrl of
-        SearchUrl search ->
-          Maybe.withDefault "*" search
+
+initSearchTerm : Maybe Route -> String
+initSearchTerm route =
+    case route of
+        Just searchUrl ->
+            case searchUrl of
+                SearchUrl search ->
+                    Maybe.withDefault "*" search
+
+                _ ->
+                    "*"
+
         _ ->
-          "*"
-    _ ->
-      "*" 
+            "*"
 
-init : Flags -> Url.Url -> Nav.Key -> ( Model, Cmd Msg )
-init flags url navKey =
+
+init : Json.Decode.Value -> Url.Url -> Nav.Key -> ( Model, Cmd Msg )
+init rawFlags url navKey =
     let
-        initRoute = Url.Parser.parse urlParser url 
-        initSearch = initSearchTerm  initRoute 
-        
-        initUser = Auth0.convert flags.initialUser |> Auth0.mapResult
-    
-        
-          
-        user = case initUser of
-            Ok u ->
-                Just u
+        fixFlag =
+            Json.Decode.decodeValue Flags.decodeFlags rawFlags
 
-            Err _ ->
-               Maybe.Nothing 
+        flags =
+            case fixFlag of
+                Ok f ->
+                    f
 
-          
-          
+                Err _ ->
+                    Flags.initialFlags
+
+        initRoute =
+            Url.Parser.parse urlParser url
+
+        initSearch =
+            initSearchTerm initRoute
+
+        initUser =
+            flags.initialUser |> Auth0.mapResult
+
+        user =
+            case initUser of
+                Ok u ->
+                    Just u
+
+                Err _ ->
+                    Maybe.Nothing
+
+        authModel =
+            Authentication.init auth0Authorize auth0Logout user
     in
-    
     ( { results = RemoteData.Loading
       , selectedYearFacets = []
       , selectedCategoryFacets = []
@@ -113,10 +151,28 @@ init flags url navKey =
       , searchServiceApiKey = flags.searchApiKey
       , route = initRoute
       , navKey = navKey
-      , authModel = Authentication.init auth0Authorize auth0Logout user
+      , authModel = authModel
+      , noteModel = NoteView.init authModel.state flags.botUrl
+      , favorites = []
+      , flags = flags
       }
-    , Cmd.batch [pageLoaded "", fetchRecipes [] [] initSearch flags.searchServiceUrl flags.searchApiKey ]
+    , Cmd.batch [ pageLoaded "", loadFavorites flags.botUrl user, fetchRecipes [] [] initSearch flags.searchServiceUrl flags.searchApiKey ]
     )
+
+
+loadFavorites : BotUrl -> Maybe Auth0.LoggedInUser -> Cmd Msg
+loadFavorites url user =
+    case user of
+        Just u ->
+            getFavorites url u GotFavorites
+
+        Nothing ->
+            Cmd.none
+
+
+toggleFavorite : BotUrl -> Recipe -> Auth0.LoggedInUser -> Cmd Msg
+toggleFavorite url recipe user =
+    updateFavorites url user recipe GotFavorites
 
 
 fetchRecipes : List String -> List String -> String -> String -> String -> Cmd Msg
@@ -159,12 +215,38 @@ buildSearchUrl url apiKey yearFacets categoryFacets searchTerm =
 update : Msg -> Model -> ( Model, Cmd Msg )
 update msg model =
     case msg of
+        ShowNote recipe ->
+            ( model, Cmd.none )
+
+        FavoriteChange recipe ->
+            case model.authModel.state of
+                Auth0.LoggedIn user ->
+                    ( model, toggleFavorite model.flags.botUrl recipe user )
+
+                _ ->
+                    ( model, Cmd.none )
+
+        GotFavorites favorites ->
+            case favorites of
+                Success data ->
+                    ( { model | favorites = List.map (\s -> toFavorite s.recipeId) data }, Cmd.none )
+
+                _ ->
+                    ( { model | favorites = [] }, Cmd.none )
+
         AuthenticationMsg authMsg ->
             let
-                (authModel, cmd) =
+                ( authModel, cmd ) =
                     Authentication.update authMsg model.authModel
             in
-            ( { model | authModel = authModel}, Cmd.map AuthenticationMsg cmd)
+            ( { model | authModel = authModel }, Cmd.map AuthenticationMsg cmd )
+
+        NoteMsg noteViewMsg ->
+            let
+                ( noteModel, cmd ) =
+                    NoteView.update noteViewMsg model.noteModel
+            in
+            ( { model | noteModel = noteModel }, Cmd.map NoteMsg cmd )
 
         LinkClicked urlRequest ->
             case urlRequest of
@@ -177,9 +259,21 @@ update msg model =
         UrlChanged url ->
             ( { model | route = Url.Parser.parse urlParser url }, Cmd.none )
 
+        LogoutRequest ->
+            let
+                authModel =
+                    model.authModel
+
+                newAuthModel =
+                    { authModel | state = Auth0.LoggedOut }
+            in
+            ( { model | authModel = newAuthModel }, auth0Logout () )
+
+        LoginRequest ->
+            ( { model | results = RemoteData.Loading }, auth0Authorize {} )
+
         SendHttpRequest ->
-            ( { model | results = RemoteData.Loading }, auth0Authorize {}  )
-            --( { model | results = RemoteData.Loading }, fetchRecipes model.selectedYearFacets model.selectedCategoryFacets model.searchTerm model.searchServiceUrl model.searchServiceApiKey )
+            ( { model | results = RemoteData.Loading }, fetchRecipes model.selectedYearFacets model.selectedCategoryFacets model.searchTerm model.searchServiceUrl model.searchServiceApiKey )
 
         RecipesReceived response ->
             ( { model | results = response }, Cmd.none )
@@ -225,21 +319,50 @@ update msg model =
             )
 
 
-
--- VIEWS
-
-
 view : Model -> Browser.Document Msg
 view model =
     { title = "Recipe Search"
     , body =
         [ div []
-            [ viewSearchBox
+            [ viewLogin model
+            , viewSearchBox
             , viewChips model
             , viewContents model
+            , NoteView.view model.noteModel |> Html.map NoteMsg
             ]
         ]
     }
+
+
+viewLogin : Model -> Html Msg
+viewLogin model =
+    let
+        display =
+            case model.authModel.state of
+                Auth0.LoggedIn user ->
+                    viewHasLoggedInUser model user
+
+                Auth0.LoggedOut ->
+                    viewIsLoggedOut model
+    in
+    div [ class "column is-4 is-offset-6" ]
+        [ div [ class "block" ]
+            [ display ]
+        ]
+
+
+viewIsLoggedOut : Model -> Html Msg
+viewIsLoggedOut model =
+    button [ class "button is-text", onClick LoginRequest ]
+        [ text "[Login]"
+        ]
+
+
+viewHasLoggedInUser : Model -> Auth0.LoggedInUser -> Html Msg
+viewHasLoggedInUser model user =
+    button [ class "button is-text", onClick LogoutRequest ]
+        [ text ("Logout " ++ user.profile.emailAddress)
+        ]
 
 
 chip : String -> Html Msg
@@ -298,19 +421,28 @@ viewSearchBox =
         ]
 
 
-viewRecipes : List Recipe -> Html Msg
-viewRecipes recipes =
+viewRecipes : Model -> List Recipe -> Html Msg
+viewRecipes model recipes =
     div []
         [ table [ class "table is-hoverable is-narrow" ]
-            (viewTableHeader :: List.map viewRecipe recipes)
+            (viewTableHeader model :: List.map (\r -> viewRecipe model r) recipes)
         ]
 
 
-viewTableHeader : Html Msg
-viewTableHeader =
+viewTableHeader : Model -> Html Msg
+viewTableHeader model =
+    let
+        favHeader =
+            if Authentication.isLoggedIn model.authModel then
+                th [] []
+
+            else
+                text ""
+    in
     thead []
         [ tr []
-            [ th []
+            [ favHeader
+            , th []
                 [ text "Issue" ]
             , th []
                 [ text "Date" ]
@@ -320,14 +452,52 @@ viewTableHeader =
                 [ text "Page" ]
             , th []
                 [ text "Category" ]
+            , th []
+                [ text "Actions" ]
             ]
         ]
 
 
-viewRecipe : Recipe -> Html Msg
-viewRecipe recipe =
+viewFavorite : Favorites -> Recipe -> Html Msg
+viewFavorite favs recipe =
+    case List.filter (\f -> recipe.recipeId == Favorite.fromFavorite f) favs |> List.length of
+        1 ->
+            span [ class "icon" ]
+                [ i []
+                    [ Icon.star |> Icon.view ]
+                ]
+
+        _ ->
+            text ""
+
+
+viewNote : Recipe -> Html Msg
+viewNote recipe =
+    if List.isEmpty recipe.notes |> not then
+        button [ class "button is-small" ]
+            [ span [ class "icon" ]
+                [ i []
+                    [ Icon.comments |> Icon.view ]
+                ]
+            ]
+
+    else
+        text ""
+
+
+viewRecipe : Model -> Recipe -> Html Msg
+viewRecipe model recipe =
+    let
+        favHeader =
+            if Authentication.isLoggedIn model.authModel then
+                td [] [ viewFavorite model.favorites recipe, viewNote recipe ]
+
+            else
+                text ""
+    in
     tr []
-        [ td []
+        [ favHeader
+        , td []
             [ text (String.fromInt recipe.issue) ]
         , td []
             [ text (formatDate recipe) ]
@@ -337,7 +507,36 @@ viewRecipe recipe =
             [ text (String.fromInt recipe.page) ]
         , td []
             [ text (String.join ", " recipe.categories) ]
+        , td []
+            [ viewFavoriteButton model.favorites recipe
+            , text "|"
+            , NoteView.viewNoteButton recipe |> Html.map NoteMsg
+            ]
         ]
+
+
+viewFavoriteButton : Favorites -> Recipe -> Html Msg
+viewFavoriteButton favs recipe =
+    let
+        textBlock =
+            if isFavorite favs recipe then
+                "Unfavorite"
+
+            else
+                "Favorite"
+    in
+    button [ class "button is-small is-text", onClick (FavoriteChange recipe) ]
+        [ text textBlock
+        ]
+
+
+isFavorite : Favorites -> Recipe -> Bool
+isFavorite favs recipe =
+    let
+        count =
+            List.filter (\f -> recipe.recipeId == Favorite.fromFavorite f) favs |> List.length
+    in
+    count == 1
 
 
 viewCategoryFacet : List String -> CategoryFacet -> Html Msg
@@ -422,7 +621,7 @@ viewRecipesOrError model =
             h3 [] [ text "Loading..." ]
 
         RemoteData.Success results ->
-            viewRecipes results.recipes
+            viewRecipes model results.recipes
 
         RemoteData.Failure httpError ->
             viewError (buildErrorMessage httpError)
@@ -459,14 +658,7 @@ buildErrorMessage httpError =
             message
 
 
-type alias Flags =
-    { searchServiceUrl : String
-    , searchApiKey : String
-    , initialUser : Json.Decode.Value 
-    }
-
-
-main : Program Flags Model Msg
+main : Program Json.Decode.Value Model Msg
 main =
     Browser.application
         { init = init
@@ -510,6 +702,7 @@ indexDecoder =
         yearFacetDecoder
         categoryFacetDecoder
         recipesDecoder
+
 
 subscriptions : Model -> Sub Msg
 subscriptions model =
